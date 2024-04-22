@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(uuid())
+  email      String      @unique
+  name       String?
+  username   String      // we can get this from github name or gmail name
+  bio        String?
+  profilePic String?
+  followers  Int         @default(0)
+  following  Int         @default(0)
+  githubAuth Boolean     @default(false)
+  googleAuth Boolean     @default(false)
+  locale     String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime?    @default(now())
+  Blog       Blog[]
+  Likes      Likes[]
+  Follower   Followers[]  @relation("follower")
+  User       Followers[]  @relation("user")
+  Comments   Comments[]
+  BookMarks  BookMarks[]
+}
+
+model Blog {
+  id           Int         @id @default(autoincrement())
+  title        String
+  author       User        @relation(fields: [authorId], references: [id])
+  authorId     String
+  content      String
+  published    Boolean     @default(false)
+  likeCount    Int?         @default(0)
+  viewCount    Int?         @default(0)
+  commentCount Int?         @default(0)
+  readTime     Int?         
+  publishedAt  DateTime?   
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime?    @default(now())
+  tags         String[]
+  Likes        Likes[]
+  Comments     Comments[]
+  BookMarks    BookMarks[]
+}
+
+model Likes {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  blogId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  blog      Blog     @relation(fields: [blogId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Followers {
+  id         Int      @id @default(autoincrement())
+  userId     String   @unique
+  followerId String   @unique
+  createdAt  DateTime @default(now())
+  user       User     @relation("user", fields: [userId], references: [id])
+  follower   User     @relation("follower", fields: [followerId], references: [id])
+}
+
+model Comments {
+  id              Int        @id @default(autoincrement())
+  authorId        String
+  blogId          Int
+  content         String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime?   @default(now())
+  author          User       @relation(fields: [authorId], references: [id])
+  blog            Blog       @relation(fields: [blogId], references: [id])
+  parentCommentId Int?
+  parentComment   Comments?  @relation("parentComment", fields: [parentCommentId], references: [id])
+  childComment    Comments[] @relation("parentComment")
+}
+
+model BookMarks {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  blogId    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  blog      Blog     @relation(fields: [blogId], references: [id])
+}
