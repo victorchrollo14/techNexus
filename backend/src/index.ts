@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import user from "./routes/userRoutes";
 import blog from "./routes/blogRoutes";
 import { prismaInit } from "./middlewares/prisma";
+import { cors } from "hono/cors";
 
 const app = new Hono<{
   Bindings: {
     DATABASE_URL: string;
+    JWT_SECRET: string;
   };
 }>();
 

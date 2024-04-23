@@ -17,11 +17,13 @@ model User {
   id         String      @id @default(uuid())
   email      String      @unique
   name       String?
-  username   String      // we can get this from github name or gmail name
+  username   String?     @unique // we can get this from github name or gmail name
+  password   String?
   bio        String?
   profilePic String?
   followers  Int         @default(0)
   following  Int         @default(0)
+  normalAuth Boolean     @default(false)
   githubAuth Boolean     @default(false)
   googleAuth Boolean     @default(false)
   locale     String?
