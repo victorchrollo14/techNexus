@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { sign } from "hono/jwt";
+import { jwt, sign } from "hono/jwt";
 import { Prisma, User } from "@prisma/client";
 import { PrismaClient } from "@prisma/client/edge";
-import { hashPassword } from "../utils/encrypt";
+import { hashPassword, verifyPassword } from "../utils/encrypt";
 
 const app = new Hono();
 
@@ -12,7 +12,6 @@ app.post("/auth/register", async (c: any) => {
     const body = await c.req.json();
 
     const { name, email, password } = body;
-    const hashedPassword = await hashPassword(password);
 
     const userExists = await prisma.user.findFirst({
       where: {
@@ -23,6 +22,7 @@ app.post("/auth/register", async (c: any) => {
     if (userExists)
       return c.body("User already Registered, try logging in.", 409);
 
+    const hashedPassword = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
         name: name,
@@ -38,6 +38,43 @@ app.post("/auth/register", async (c: any) => {
     console.log(error);
     return c.body("Internal server Error", 500);
   }
+});
+
+app.post("auth/login", async (c: any) => {
+  const prisma: PrismaClient = c.prisma;
+  const body = await c.req.json();
+
+  const { email, password } = body;
+  const user = await prisma.user.findFirst({
+    where: {
+      email: email,
+    },
+  });
+
+  if (!user) {
+    c.status(409);
+    return c.json({ error: "User Doesn't exist Sign up first." });
+  }
+
+  const storedPassword = user["password"];
+  if (storedPassword && user.normalAuth) {
+    const matchPassword = await verifyPassword(storedPassword, password);
+    if (!matchPassword) {
+      c.status(409);
+      return c.json({
+        error: "Password Doesn't match, try a different password",
+      });
+    }
+  } else {
+    c.status(409);
+    return c.json({
+      error: "Password doesn't exist, try using google or github auth",
+    });
+  }
+
+  const jwt = await sign({ user: user.id }, c.env.JWT_SECRET);
+
+  return c.json({ message: "Login Successful", auth_token: jwt });
 });
 
 app.post("auth/register/google", (c) => {
