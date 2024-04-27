@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import { jwt, sign } from "hono/jwt";
-import { Prisma, User } from "@prisma/client";
+import { sign } from "hono/jwt";
 import { PrismaClient } from "@prisma/client/edge";
 import { hashPassword, verifyPassword } from "../utils/encrypt";
+import { verifyUser } from "../middlewares/auth";
+import { z } from "zod";
+import { updateUserInput } from "../utils/zod";
 
 const app = new Hono();
 
@@ -77,6 +79,67 @@ app.post("auth/login", async (c: any) => {
   return c.json({ message: "Login Successful", auth_token: jwt });
 });
 
+app.get("/data", verifyUser, async (c: any) => {
+  // code to get user data;
+  try {
+    const prisma: PrismaClient = c.prisma;
+    const userId = c.get("user");
+
+    const userData = await prisma.user.findFirst({
+      where: {
+        id: userId,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        bio: true,
+        profilePic: true,
+        followers: true,
+        following: true,
+        locale: true,
+      },
+    });
+
+    return c.json({ userData });
+  } catch (error) {
+    console.log(error);
+    c.status(500);
+    return c.json({ error: "Internal Server Error" });
+  }
+});
+
+app.patch("/data", verifyUser, async (c: any) => {
+  try {
+    const userId: string = c.get("user");
+    const prisma: PrismaClient = c.prisma;
+    // allow only these fields, name, username, bio, profilePic;
+    const body = await c.req.json();
+
+    const validate = updateUserInput.safeParse(body);
+    console.log(validate);
+    if (!validate.success) {
+      c.status(400);
+      return c.json({ error: "Bad Request, invalid data" });
+    }
+
+    const updateUser = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: validate.data,
+    });
+
+    console.log(updateUser);
+    return c.json({ message: "updated user data" });
+  } catch (error) {
+    console.log(error);
+    c.status(500);
+    return c.json({ error: "Internal Server Error" });
+  }
+});
+
 app.post("auth/register/google", (c) => {
   // code to register via google.
   return c.text("register with google");
@@ -96,11 +159,6 @@ app.post("/register/github", (c: any) => {
 app.post("/login/github", (c) => {
   // code to login via github
   return c.text("login  with github");
-});
-
-app.get("/:id", (c) => {
-  // code to get user data;
-  return c.text("returns user data ");
 });
 
 export default app;

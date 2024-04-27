@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import user from "./routes/userRoutes";
-import blog from "./routes/blogRoutes";
+import userRouter from "./routes/userRoutes";
+import blogRouter from "./routes/blogRoutes";
 import { prismaInit } from "./middlewares/prisma";
 import { cors } from "hono/cors";
 
@@ -11,10 +11,14 @@ const app = new Hono<{
   };
 }>();
 
+app.use(
+  "/api/*",
+  cors({ origin: ["http://localhost:3000", "http://localhost:3001"] }),
+);
 app.use(prismaInit);
 
-app.route("/api/user", user);
-app.route("/api/blog", blog);
+app.route("/api/user", userRouter);
+app.route("/api/blog", blogRouter);
 
 app.get("/", (c: any) => {
   return c.text("Hello Hono!");

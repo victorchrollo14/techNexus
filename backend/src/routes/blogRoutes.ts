@@ -1,34 +1,33 @@
 import { Hono } from "hono";
-import {PrismaClient} from '@prisma/client/edge'
-import { withAccelerate } from '@prisma/extension-accelerate'
+import { PrismaClient } from "@prisma/client/edge";
 
-const blog = new Hono();
+const blogRouter = new Hono();
 
-blog.get("/:id", (c:any) => {
+blogRouter.get("/:id", (c: any) => {
   // requesting a particular blog.
 
-const prisma = new PrismaClient({datasourceUrl: c.env.DATABASE_URL}).$extends(withAccelerate());
   return c.text("get a particular blog route");
 });
 
-blog.get("/bulk", (c) => {
+blogRouter.get("/bulk", (c) => {
   // requesting a bulk of blogs at once.
   return c.text("get a bulk of blogs ");
 });
 
-blog.post("/", (c) => {
+blogRouter.post("/", async (c: any) => {
   // creating a new blog.
+  const body = await c.req.json();
   return c.text("create a new blog ");
 });
 
-blog.get("/search", (c) => {
+blogRouter.get("/search", (c) => {
   // searching a list of blogs.
   return c.text("search for blogs related to a query");
 });
 
-blog.put("/:id", (c) => {
+blogRouter.put("/:id", (c) => {
   // updating the blog.
   return c.text("Updating an existing blog");
 });
 
-export default blog;
+export default blogRouter;
