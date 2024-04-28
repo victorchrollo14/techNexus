@@ -2,12 +2,43 @@ import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { verifyUser } from "../middlewares/auth";
 import { saveBlogInput } from "../utils/zod";
+import { z } from "zod";
 
+const blogIdSchema = z.coerce.number();
 const blogRouter = new Hono();
 
-blogRouter.get("/:id", (c: any) => {
+blogRouter.get("/:id", async (c: any) => {
   // requesting a particular blog.
-  return c.text("get a particular blog route");
+  try {
+    const prisma: PrismaClient = c.prisma;
+    const blogId = c.req.param("id");
+    const isValid = blogIdSchema.safeParse(blogId);
+    if (!isValid.success) {
+      c.status(400);
+      return c.json({ error: "Bad Request, Invalid data" });
+    }
+
+    const blog = await prisma.blog.findFirst({
+      select: {
+        title: true,
+        authorId: true,
+        content: true,
+        tags: true,
+        Comments: true,
+        likeCount: true,
+        commentCount: true,
+      },
+      where: {
+        id: isValid.data,
+        published: true,
+      },
+    });
+    return c.json({ blog });
+  } catch (error) {
+    console.log(error);
+    c.status(500);
+    c.json({ error: "Internal Server Error" });
+  }
 });
 
 blogRouter.get("/bulk", (c) => {
@@ -16,7 +47,6 @@ blogRouter.get("/bulk", (c) => {
 });
 
 blogRouter.post("/save", verifyUser, async (c: any) => {
-  // creating a new blog.
   try {
     const userId = c.get("user");
     const prisma: PrismaClient = c.prisma;
@@ -30,7 +60,7 @@ blogRouter.post("/save", verifyUser, async (c: any) => {
     }
 
     const { title, content } = validateInput.data;
-    const saveBlog = await prisma.blog.create({
+    await prisma.blog.create({
       data: { authorId: userId, title: title, content: content },
     });
     return c.json({ message: "Saved the blog " });
