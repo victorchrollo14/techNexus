@@ -8,3 +8,8 @@ export const updateUserInput = z
     profilePic: z.string(),
   })
   .partial();
+
+export const saveBlogInput = z.object({
+  title: z.string(),
+  content: z.string(),
+});
