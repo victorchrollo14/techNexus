@@ -20,3 +20,10 @@ A simple Blogging application like medium.com or hashnode that let's users write
 1. Sign in and Sign up.
 2. Write and publish blogs also update them.
 3. Display blogs on the Frontend.
+
+##### frontend pages.
+
+1. Signin and Signup.
+2. Landing page to display blogs.
+3. Page to Write and Edit blogs.
+4. Profile Page.(optional)

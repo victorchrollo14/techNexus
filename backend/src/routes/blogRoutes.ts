@@ -7,11 +7,40 @@ import { z } from "zod";
 const blogIdSchema = z.coerce.number();
 const blogRouter = new Hono();
 
+blogRouter.get("/bulk", async (c: any) => {
+  // requesting a bulk of blogs at once.
+  try {
+    const prisma: PrismaClient = c.prisma;
+
+    const blogs = await prisma.blog.findMany({
+      select: {
+        title: true,
+        authorId: true,
+        content: true,
+        tags: true,
+        Comments: true,
+        likeCount: true,
+        commentCount: true,
+      },
+      take: 30,
+      where: {
+        published: true,
+      },
+    });
+    console.log(blogs);
+    return c.json({ blogs });
+  } catch (error) {
+    c.status(500);
+    return c.json({ error: "Internal server error" });
+  }
+});
+
 blogRouter.get("/:id", async (c: any) => {
   // requesting a particular blog.
   try {
     const prisma: PrismaClient = c.prisma;
     const blogId = c.req.param("id");
+
     const isValid = blogIdSchema.safeParse(blogId);
     if (!isValid.success) {
       c.status(400);
@@ -41,11 +70,6 @@ blogRouter.get("/:id", async (c: any) => {
   }
 });
 
-blogRouter.get("/bulk", (c) => {
-  // requesting a bulk of blogs at once.
-  return c.text("get a bulk of blogs ");
-});
-
 blogRouter.post("/save", verifyUser, async (c: any) => {
   try {
     const userId = c.get("user");
@@ -71,9 +95,44 @@ blogRouter.post("/save", verifyUser, async (c: any) => {
   }
 });
 
-blogRouter.get("/search", (c) => {
-  // searching a list of blogs.
-  return c.text("search for blogs related to a query");
+blogRouter.get("/search/:query", async (c: any) => {
+  // searching a list of blogs
+  try {
+    const prisma: PrismaClient = c.prisma;
+    const query: string = c.req.param("query");
+    console.log(query);
+    const blogs = await prisma.blog.findMany({
+      select: {
+        title: true,
+        authorId: true,
+        content: true,
+        tags: true,
+        Comments: true,
+        likeCount: true,
+        commentCount: true,
+      },
+      take: 30,
+      where: {
+        OR: [
+          {
+            content: {
+              contains: query,
+            },
+          },
+          {
+            title: {
+              contains: query,
+            },
+          },
+        ],
+        AND: { published: true },
+      },
+    });
+    return c.json({ blogs });
+  } catch (error) {
+    c.status(500);
+    return c.json({ error: "Internal Server Error" });
+  }
 });
 
 blogRouter.put("/:id", (c) => {

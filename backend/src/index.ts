@@ -17,8 +17,8 @@ app.use(
 );
 app.use(prismaInit);
 
-app.route("/api/user", userRouter);
-app.route("/api/blog", blogRouter);
+app.route("/api/v1/user", userRouter);
+app.route("/api/v1/blog", blogRouter);
 
 app.get("/", (c: any) => {
   return c.text("Hello Hono!");
