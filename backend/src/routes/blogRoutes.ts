@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { verifyUser } from "../middlewares/auth";
-import { saveBlogInput } from "../utils/zod";
+import { saveBlogInput, blogUpdateInput } from "../utils/zod";
 import { z } from "zod";
+import { Context } from "hono/jsx";
 
 const blogIdSchema = z.coerce.number();
 const blogRouter = new Hono();
@@ -135,9 +136,36 @@ blogRouter.get("/search/:query", async (c: any) => {
   }
 });
 
-blogRouter.put("/:id", (c) => {
+blogRouter.put("/:id", verifyUser, async (c: any) => {
   // updating the blog.
-  return c.text("Updating an existing blog");
+  try {
+    const prisma: PrismaClient = c.prisma;
+    const body = await c.req.json();
+    const blogId = c.req.param("id");
+    const userId = c.get("user");
+
+    const validBlogId = blogIdSchema.safeParse(blogId);
+    const validInput = blogUpdateInput.safeParse(body);
+
+    console.log(validBlogId, validInput);
+
+    if (!validInput.success || !validBlogId.success) {
+      c.status(400);
+      return c.json({ error: "Bad request, invalid input" });
+    }
+    const updateBlog = await prisma.blog.update({
+      where: { id: validBlogId.data, authorId: userId },
+      data: {
+        title: validInput.data.title,
+        content: validInput.data.content,
+      },
+    });
+
+    return c.json("updated blog");
+  } catch (error) {
+    c.status(500);
+    return c.json({ error: "Internal Server Error" });
+  }
 });
 
 export default blogRouter;
